@@ -3,6 +3,7 @@
 
 void loadTextures(sf::Texture* textures);
 void drawBackground(sf::RenderWindow& window, sf::Texture* t_black, sf::Texture* t_white);
+void drawUtils(sf::RenderWindow& window, Board& board, sf::Text& text);
 
 int main()
 {
@@ -14,8 +15,16 @@ int main()
 	sf::Texture* textures = new sf::Texture[14];
 	loadTextures(textures);
 
+	sf::Font font;
+	font.loadFromFile("Resources/arial.ttf");
+
 	// Board init
 	Board board = Board();
+
+	sf::Text text = sf::Text();
+	text.setFont(font);
+	text.setCharacterSize(32);
+	text.setPosition(1050, 0);
 
 	// Main Loop
 	while (window.isOpen())
@@ -43,9 +52,36 @@ int main()
 			board.clickTile(-1, -1);
 
 		board.displayBoard(window, textures);
+		drawUtils(window, board, text);
 
 		window.display();
 	}
+}
+
+void drawUtils(sf::RenderWindow& window, Board& board, sf::Text& text)
+{
+	switch (board.state)
+	{
+	case State::ON_GAME:
+		if (board.currentPlayer == 0)
+			text.setString("Player: White");
+		else
+			text.setString("Player: Black");
+		break;
+	case State::WHITE_CHECK:
+		text.setString("White Checked Black");
+		break;
+	case State::BLACK_CHECK:
+		text.setString("Black Checked White");
+		break;
+	case State::WHITE_MATE:
+		text.setString("Black won!");
+		break;
+	case State::BLACK_MATE:
+		text.setString("White won!");
+		break;
+	}
+	window.draw(text);
 }
 
 void drawBackground(sf::RenderWindow& window, sf::Texture* t_white, sf::Texture* t_black)

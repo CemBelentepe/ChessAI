@@ -9,6 +9,11 @@ enum class Type
 	EMPTY
 };
 
+enum class State
+{
+	ON_GAME, WHITE_CHECK, BLACK_CHECK, BLACK_MATE, WHITE_MATE
+};
+
 struct Move
 {
 	Type piece;
@@ -43,14 +48,18 @@ public:
 	std::vector<Move> selectedMoves;
 	bool whiteCastling0, whiteCastling1;
 	bool blackCastling0, blackCastling1;
+	State state;
 
 	Board();
 
 	void displayBoard(sf::RenderWindow& window, sf::Texture* textures);
 	void clickTile(int x, int y);
+	void doMove(Move move);
 
 	std::vector<Move> getPossibleMoves(int x, int y);
-	int evaluateBoard();
+	std::vector<Move> getAllMoves(int player);
+	State getBoardState();
+	float evaluateBoard();
 
 	inline int getIndex(int x, int y)
 	{

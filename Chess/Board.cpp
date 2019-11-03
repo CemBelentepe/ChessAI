@@ -11,6 +11,7 @@ Board::Board()
 	this->whiteCastling1 = true;
 	this->blackCastling0 = true;
 	this->blackCastling1 = true;
+	this->state = State::ON_GAME;
 }
 
 void Board::displayBoard(sf::RenderWindow& window, sf::Texture* textures)
@@ -66,84 +67,91 @@ void Board::clickTile(int x, int y)
 				{
 					move = m;
 					flag = true;
+					break;
 				}
 			}
 			if (flag)
 			{
-				data[move.start_x + 8 * move.start_y] = Type::EMPTY;
-				data[8 * y + x] = move.piece;
-
-				if ((move.piece == Type::W_KING || move.piece == Type::B_KING) && move.isCastling)
-				{
-					if (move.piece == Type::W_KING)
-					{
-						if (move.end_x == 6)
-						{
-							data[this->getIndex(7, 7)] = Type::EMPTY;
-							data[this->getIndex(5, 7)] = Type::W_ROOK;
-						}
-						else if (move.end_x == 2)
-						{
-							data[this->getIndex(0, 7)] = Type::EMPTY;
-							data[this->getIndex(3, 7)] = Type::W_ROOK;
-						}
-						this->whiteCastling0 = false;
-						this->whiteCastling1 = false;
-					}
-					else if (move.piece == Type::B_KING)
-					{
-						if (move.end_x == 6)
-						{
-							data[this->getIndex(7, 0)] = Type::EMPTY;
-							data[this->getIndex(5, 0)] = Type::B_ROOK;
-						}
-						else if (move.end_x == 2)
-						{
-							data[this->getIndex(0, 0)] = Type::EMPTY;
-							data[this->getIndex(3, 0)] = Type::B_ROOK;
-						}
-						this->blackCastling0 = false;
-						this->blackCastling1 = false;
-					}
-				}
-				else if (move.piece == Type::W_KING)
-				{
-					this->whiteCastling0 = false;
-					this->whiteCastling1 = false;
-				}
-				else if (move.piece == Type::B_KING)
-				{
-					this->blackCastling0 = false;
-					this->blackCastling1 = false;
-				}
-				else if (move.piece == Type::W_ROOK && move.start_y == 7)
-				{
-					if (whiteCastling0 && move.start_x == 6)
-					{
-						whiteCastling0 = false;
-					} 
-					else if (whiteCastling1 && move.start_x == 0)
-					{
-						whiteCastling1 = false;
-					}
-				}
-				else if (move.piece == Type::B_ROOK && move.start_y == 0)
-				{
-					if (blackCastling0 && move.start_x == 6)
-					{
-						blackCastling0 = false;
-					}
-					else if (blackCastling1 && move.start_x == 0)
-					{
-						blackCastling1 = false;
-					}
-				}
-				
-				this->clickTile(-1, -1);
-				this->currentPlayer = (this->currentPlayer + 1) % 2;
+				this->doMove(move);
 			}
 		}
 	}
+}
+
+void Board::doMove(Move move)
+{
+	data[move.start_x + 8 * move.start_y] = Type::EMPTY;
+	data[8 * move.end_y + move.end_x] = move.piece;
+
+	if ((move.piece == Type::W_KING || move.piece == Type::B_KING) && move.isCastling)
+	{
+		if (move.piece == Type::W_KING)
+		{
+			if (move.end_x == 6)
+			{
+				data[this->getIndex(7, 7)] = Type::EMPTY;
+				data[this->getIndex(5, 7)] = Type::W_ROOK;
+			}
+			else if (move.end_x == 2)
+			{
+				data[this->getIndex(0, 7)] = Type::EMPTY;
+				data[this->getIndex(3, 7)] = Type::W_ROOK;
+			}
+			this->whiteCastling0 = false;
+			this->whiteCastling1 = false;
+		}
+		else if (move.piece == Type::B_KING)
+		{
+			if (move.end_x == 6)
+			{
+				data[this->getIndex(7, 0)] = Type::EMPTY;
+				data[this->getIndex(5, 0)] = Type::B_ROOK;
+			}
+			else if (move.end_x == 2)
+			{
+				data[this->getIndex(0, 0)] = Type::EMPTY;
+				data[this->getIndex(3, 0)] = Type::B_ROOK;
+			}
+			this->blackCastling0 = false;
+			this->blackCastling1 = false;
+		}
+	}
+	else if (move.piece == Type::W_KING)
+	{
+		this->whiteCastling0 = false;
+		this->whiteCastling1 = false;
+	}
+	else if (move.piece == Type::B_KING)
+	{
+		this->blackCastling0 = false;
+		this->blackCastling1 = false;
+	}
+	else if (move.piece == Type::W_ROOK && move.start_y == 7)
+	{
+		if (whiteCastling0 && move.start_x == 6)
+		{
+			whiteCastling0 = false;
+		}
+		else if (whiteCastling1 && move.start_x == 0)
+		{
+			whiteCastling1 = false;
+		}
+	}
+	else if (move.piece == Type::B_ROOK && move.start_y == 0)
+	{
+		if (blackCastling0 && move.start_x == 6)
+		{
+			blackCastling0 = false;
+		}
+		else if (blackCastling1 && move.start_x == 0)
+		{
+			blackCastling1 = false;
+		}
+	}
+
+	this->clickTile(-1, -1);
+	this->state = this->getBoardState();
+	this->currentPlayer = (this->currentPlayer + 1) % 2;
 }
 
 std::vector<Move> Board::getPossibleMoves(int x, int y)
@@ -234,7 +242,6 @@ std::vector<Move> Board::getPossibleMoves(int x, int y)
 			}
 		}
 	}
-	// Add rook
 	else if (piece == Type::B_KING || piece == Type::W_KING)
 	{
 		for (int a = -1; a < 2; a++)
@@ -349,5 +356,75 @@ std::vector<Move> Board::getPossibleMoves(int x, int y)
 			}
 		}
 	}
+
+	// WTF ??
+	for (int i = moves.size() - 1; i >= 0; i--)
+	{
+		Move& move = moves[i];
+		Board* child = new Board(*this);
+		child->currentPlayer = (currentPlayer + 1) % 2;
+		child->doMove(move);
+		std::vector<Move> childMoves = child->getAllMoves(child->currentPlayer);
+		for (int j = 0; j < childMoves.size(); j++)
+		{
+			if (currentPlayer == 0 && childMoves[i].piece == Type::W_KING)
+			{
+				moves.erase(moves.begin() + i);
+				break;
+			}
+			else if (currentPlayer == 1 && childMoves[i].piece == Type::B_KING)
+			{
+				moves.erase(moves.begin() + i);
+				break;
+			}
+		}
+		delete child;
+	}
+
 	return moves;
+}
+
+std::vector<Move> Board::getAllMoves(int player)
+{
+	std::vector<Move> moves;
+	for (int i = 0; i < 8; i++)
+	{
+		for (int j = 0; j < 8; j++)
+		{
+			std::vector<Move> m = this->getPossibleMoves(i, j);
+			moves.insert(moves.end(), m.begin(), m.end());
+		}
+	}
+	return moves;
+}
+
+State Board::getBoardState()
+{
+	State _state = state;
+	std::vector<Move> moves = this->getAllMoves(currentPlayer);
+
+	if (moves.size() == 0)
+	{
+		if (currentPlayer == 0)
+			_state = State::WHITE_MATE; // White is mated
+		else
+			_state = State::BLACK_MATE; // Black is mated
+	}
+	else
+	{
+		for (int i = 0; i < moves.size(); i++)
+		{
+			Move& move = moves[i];
+			if (move.eaten == Type::W_KING)
+			{
+				_state = State::BLACK_CHECK; // Black checked white
+			}
+			else if (move.eaten == Type::B_KING)
+			{
+				_state = State::WHITE_CHECK; // White checked black
+			}
+		}
+	}
+
+	return _state;
 }
