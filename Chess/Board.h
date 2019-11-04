@@ -54,11 +54,14 @@ public:
 
 	void displayBoard(sf::RenderWindow& window, sf::Texture* textures);
 	void clickTile(int x, int y);
-	void doMove(Move move);
+	void doMove(Move move, bool evaluate_mate);
 
 	std::vector<Move> getPossibleMoves(int x, int y);
 	std::vector<Move> getAllMoves(int player);
+	std::vector<Move> getMoves(int x, int y);
+	void filterMoves(std::vector<Move>& moves);
 	State getBoardState();
+	State isChecked();
 	float evaluateBoard();
 
 	inline int getIndex(int x, int y)

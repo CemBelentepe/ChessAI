@@ -1,15 +1,23 @@
 #include <SFML/Graphics.hpp>
+#include <sstream>
+#include <string>
+
 #include "Board.h"
+
+int fps_reset = 10;
 
 void loadTextures(sf::Texture* textures);
 void drawBackground(sf::RenderWindow& window, sf::Texture* t_black, sf::Texture* t_white);
 void drawUtils(sf::RenderWindow& window, Board& board, sf::Text& text);
+void showFPS(sf::RenderWindow& window, sf::Text& fpsText, sf::Clock& clock, int n, bool update);
 
 int main()
 {
 	sf::RenderWindow window(sf::VideoMode::getFullscreenModes()[0], "Chess!", sf::Style::Default);
 	window.setKeyRepeatEnabled(false);
 	window.setFramerateLimit(60);
+	sf::Clock clock;
+	int n = 0;
 
 	// Texture init
 	sf::Texture* textures = new sf::Texture[14];
@@ -26,9 +34,15 @@ int main()
 	text.setCharacterSize(32);
 	text.setPosition(1050, 0);
 
+	sf::Text fpsText = sf::Text();
+	fpsText.setFont(font);
+	fpsText.setCharacterSize(32);
+	fpsText.setPosition(1050, 50);
+
 	// Main Loop
 	while (window.isOpen())
 	{
+		clock.restart();
 		sf::Event e;
 		while (window.pollEvent(e))
 		{
@@ -53,35 +67,59 @@ int main()
 
 		board.displayBoard(window, textures);
 		drawUtils(window, board, text);
+		// showFPS(window, fpsText, clock, n, n==0);
 
 		window.display();
+		n = (n + 1) % fps_reset;
 	}
 }
 
 void drawUtils(sf::RenderWindow& window, Board& board, sf::Text& text)
 {
+	std::ostringstream stream;
+	if (board.currentPlayer == 0)
+		stream << "Player: White\n";
+	else
+		stream << "Player: Black\n";
+
 	switch (board.state)
 	{
 	case State::ON_GAME:
-		if (board.currentPlayer == 0)
-			text.setString("Player: White");
-		else
-			text.setString("Player: Black");
+		stream << "Playing";
 		break;
 	case State::WHITE_CHECK:
-		text.setString("White Checked Black");
+		stream << "White Checked Black";
 		break;
 	case State::BLACK_CHECK:
-		text.setString("Black Checked White");
+		stream << "Black Checked White";
 		break;
 	case State::WHITE_MATE:
-		text.setString("Black won!");
+		stream << "Black Won!";
 		break;
 	case State::BLACK_MATE:
-		text.setString("White won!");
+		stream << "White Won!";
 		break;
 	}
+	text.setString(stream.str());
 	window.draw(text);
+}
+
+void showFPS(sf::RenderWindow& window, sf::Text& fpsText, sf::Clock& clock, int n, bool update)
+{
+	static float totalTime = 0;
+	static float fps = 0;
+	auto dt = clock.getElapsedTime().asSeconds();
+	totalTime += dt;
+	std::ostringstream text;
+	text << "Fps: " << fps;
+	fpsText.setString(text.str());
+	if (update)
+	{
+		dt /= fps_reset;
+		fps = 1.0f / dt;
+		totalTime = 0;
+	}
+	window.draw(fpsText);
 }
 
 void drawBackground(sf::RenderWindow& window, sf::Texture* t_white, sf::Texture* t_black)

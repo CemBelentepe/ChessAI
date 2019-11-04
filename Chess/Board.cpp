@@ -54,7 +54,7 @@ void Board::clickTile(int x, int y)
 		{
 			this->selected_x = x;
 			this->selected_y = y;
-			this->selectedMoves = this->getPossibleMoves(x, y);
+			this->selectedMoves = this->getMoves(x, y);
 		}
 		else if (piece == Type::EMPTY || ((currentPlayer == 0 && (int)piece < (int)Type::W_PAWN) || currentPlayer == 1 && (int)piece >= (int)Type::W_PAWN))
 		{
@@ -72,13 +72,13 @@ void Board::clickTile(int x, int y)
 			}
 			if (flag)
 			{
-				this->doMove(move);
+				this->doMove(move, true);
 			}
 		}
 	}
 }
 
-void Board::doMove(Move move)
+void Board::doMove(Move move, bool evaluate_mate)
 {
 	data[move.start_x + 8 * move.start_y] = Type::EMPTY;
 	data[8 * move.end_y + move.end_x] = move.piece;
@@ -150,7 +150,8 @@ void Board::doMove(Move move)
 	}
 
 	this->clickTile(-1, -1);
-	this->state = this->getBoardState();
+	if (evaluate_mate) this->state = this->getBoardState();
+	else this->state = this->isChecked();
 	this->currentPlayer = (this->currentPlayer + 1) % 2;
 }
 
@@ -188,14 +189,14 @@ std::vector<Move> Board::getPossibleMoves(int x, int y)
 	{
 		int index = this->getIndex(x, y + 1);
 		Type target = data[index];
-		if (target == Type::EMPTY || (int)target >= (int)Type::W_PAWN)
+		if (target == Type::EMPTY)
 		{
 			moves.push_back(Move(piece, x, y, x, y + 1, target));
 			if (y == 1)
 			{
 				target = data[index + 8];
 
-				if ((target == Type::EMPTY || (int)target >= (int)Type::W_PAWN))
+				if (target == Type::EMPTY)
 					moves.push_back(Move(piece, x, y, x, y + 2, target));
 			}
 		}
@@ -357,30 +358,6 @@ std::vector<Move> Board::getPossibleMoves(int x, int y)
 		}
 	}
 
-	// WTF ??
-	for (int i = moves.size() - 1; i >= 0; i--)
-	{
-		Move& move = moves[i];
-		Board* child = new Board(*this);
-		child->currentPlayer = (currentPlayer + 1) % 2;
-		child->doMove(move);
-		std::vector<Move> childMoves = child->getAllMoves(child->currentPlayer);
-		for (int j = 0; j < childMoves.size(); j++)
-		{
-			if (currentPlayer == 0 && childMoves[i].piece == Type::W_KING)
-			{
-				moves.erase(moves.begin() + i);
-				break;
-			}
-			else if (currentPlayer == 1 && childMoves[i].piece == Type::B_KING)
-			{
-				moves.erase(moves.begin() + i);
-				break;
-			}
-		}
-		delete child;
-	}
-
 	return moves;
 }
 
@@ -391,40 +368,138 @@ std::vector<Move> Board::getAllMoves(int player)
 	{
 		for (int j = 0; j < 8; j++)
 		{
-			std::vector<Move> m = this->getPossibleMoves(i, j);
-			moves.insert(moves.end(), m.begin(), m.end());
+			Type& p = data[getIndex(i, j)];
+			if ((player == 0 && p < Type::W_PAWN) || (player == 1 && p >= Type::W_PAWN && p < Type::EMPTY))
+			{
+				std::vector<Move> m = this->getPossibleMoves(i, j);
+				moves.insert(moves.end(), m.begin(), m.end());
+			}
+			// std::vector<Move> m = this->getPossibleMoves(i, j);
+			// moves.insert(moves.end(), m.begin(), m.end());
 		}
 	}
 	return moves;
 }
 
+std::vector<Move> Board::getMoves(int x, int y)
+{
+	std::vector<Move> moves = std::vector<Move>();
+	moves = getPossibleMoves(x, y);
+	filterMoves(moves);
+
+	return moves;
+}
+
+void Board::filterMoves(std::vector<Move>& moves)
+{
+	for (int i = moves.size() - 1; i >= 0; i--)
+	{
+		Move& move = moves[i];
+		Board* child = new Board(*this);
+		child->doMove(move, false);
+		State childState = child->state;
+
+		if (childState == State::ON_GAME) continue;
+
+		std::vector<Move> childMoves = child->getAllMoves(child->currentPlayer);
+		for (int j = 0; j < childMoves.size(); j++)
+		{
+			if (child->currentPlayer == 1 && childState == State::BLACK_CHECK)
+			{
+				moves.erase(moves.begin() + i);
+				break;
+			}
+			else if (child->currentPlayer == 0 && childState == State::WHITE_CHECK)
+			{
+				moves.erase(moves.begin() + i);
+				break;
+			}
+		}
+		delete child;
+	}
+}
+
 State Board::getBoardState()
 {
-	State _state = state;
-	std::vector<Move> moves = this->getAllMoves(currentPlayer);
+	State _state = State::ON_GAME;
+	std::vector<Move> moves = this->getAllMoves((currentPlayer + 1) % 2);
 
-	if (moves.size() == 0)
+	for (int i = 0; i < moves.size(); i++)
 	{
-		if (currentPlayer == 0)
-			_state = State::WHITE_MATE; // White is mated
-		else
-			_state = State::BLACK_MATE; // Black is mated
-	}
-	else
-	{
-		for (int i = 0; i < moves.size(); i++)
+		Move& move = moves[i];
+		if (move.eaten == Type::W_KING)
 		{
-			Move& move = moves[i];
-			if (move.eaten == Type::W_KING)
+			_state = State::BLACK_CHECK; // Black checked white
+			break;
+		}
+		else if (move.eaten == Type::B_KING)
+		{
+			_state = State::WHITE_CHECK; // White checked black
+			break;
+		}
+	}
+	if ((_state == State::BLACK_CHECK && currentPlayer == 1) || (_state == State::WHITE_CHECK && currentPlayer == 0))
+	{
+		std::vector<Move> curr_moves = this->getAllMoves(currentPlayer);
+		for (int i = curr_moves.size() - 1; i >= 0; i--)
+		{
+			Move& move = curr_moves[i];
+			Board* child = new Board(*this);
+			child->doMove(move, false);
+			State childState = child->isChecked();
+
+			if (childState == State::ON_GAME) continue;
+
+			std::vector<Move> childMoves = child->getAllMoves(child->currentPlayer);
+			for (int j = 0; j < childMoves.size(); j++)
 			{
-				_state = State::BLACK_CHECK; // Black checked white
+				if (child->currentPlayer == 0 && childState == State::BLACK_CHECK)
+				{
+					curr_moves.erase(curr_moves.begin() + i);
+					break;
+				}
+				else if (child->currentPlayer == 1 && childState == State::WHITE_CHECK)
+				{
+					curr_moves.erase(curr_moves.begin() + i);
+					break;
+				}
 			}
-			else if (move.eaten == Type::B_KING)
+			delete child;
+		}
+		if (curr_moves.size() == 0)
+		{
+			if (_state == State::BLACK_CHECK)
 			{
-				_state = State::WHITE_CHECK; // White checked black
+				_state = State::WHITE_MATE;
+			}
+			else
+			{
+				_state = State::BLACK_MATE;
 			}
 		}
 	}
 
+	return _state;
+}
+
+State Board::isChecked()
+{
+	State _state = State::ON_GAME;
+	std::vector<Move> moves = this->getAllMoves(currentPlayer);
+
+	for (int i = 0; i < moves.size(); i++)
+	{
+		Move& move = moves[i];
+		if (move.eaten == Type::W_KING)
+		{
+			_state = State::BLACK_CHECK; // Black checked white
+			break;
+		}
+		else if (move.eaten == Type::B_KING)
+		{
+			_state = State::WHITE_CHECK; // White checked black
+			break;
+		}
+	}
 	return _state;
 }
