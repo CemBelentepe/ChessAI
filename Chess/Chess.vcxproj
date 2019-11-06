@@ -82,7 +82,9 @@
     <ClCompile Include="Board.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="AlphaBeta.h" />
     <ClInclude Include="Board.h" />
+    <ClInclude Include="Minimax.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="Resources\b_bishop.png" />

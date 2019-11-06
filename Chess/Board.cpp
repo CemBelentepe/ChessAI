@@ -158,7 +158,7 @@ void Board::doMove(Move move, bool evaluate_mate)
 std::vector<Move> Board::getPossibleMoves(int x, int y)
 {
 	std::vector<Move> moves = std::vector<Move>();
-	Type piece = data[this->getIndex(x, y)];
+	Type& piece = data[this->getIndex(x, y)];
 
 	if (piece == Type::W_PAWN && y > 0)
 	{
@@ -166,7 +166,11 @@ std::vector<Move> Board::getPossibleMoves(int x, int y)
 		Type target = data[index];
 		if (target == Type::EMPTY)
 		{
-			moves.push_back(Move(piece, x, y, x, y - 1, target));
+			if (y == 1)
+				moves.push_back(Move(Type::W_QUEEN, x, y, x, y - 1, target));
+			else
+				moves.push_back(Move(piece, x, y, x, y - 1, target));
+
 			if (y == 6)
 			{
 				target = data[index - 8];
@@ -175,15 +179,32 @@ std::vector<Move> Board::getPossibleMoves(int x, int y)
 					moves.push_back(Move(piece, x, y, x, y - 2, target));
 			}
 		}
+
 		index = this->getIndex(x - 1, y - 1);
-		target = data[index];
-		if ((int)target <= (int)Type::W_PAWN)
-			moves.push_back(Move(piece, x, y, x - 1, y - 1, target));
+		if (index != -1)
+		{
+			target = data[index];
+			if ((int)target < (int)Type::W_PAWN)
+			{
+				if (y == 1)
+					moves.push_back(Move(Type::W_QUEEN, x, y, x - 1, y - 1, target));
+				else
+					moves.push_back(Move(piece, x, y, x - 1, y - 1, target));
+			}
+		}
 
 		index = this->getIndex(x + 1, y - 1);
-		target = data[index];
-		if ((int)target <= (int)Type::W_PAWN)
-			moves.push_back(Move(piece, x, y, x + 1, y - 1, target));
+		if (index != -1)
+		{
+			target = data[index];
+			if ((int)target < (int)Type::W_PAWN)
+			{
+				if (y == 1)
+					moves.push_back(Move(Type::W_QUEEN, x, y, x + 1, y - 1, target));
+				else
+					moves.push_back(Move(piece, x, y, x + 1, y - 1, target));
+			}
+		}
 	}
 	else if (piece == Type::B_PAWN && y < 7)
 	{
@@ -191,7 +212,11 @@ std::vector<Move> Board::getPossibleMoves(int x, int y)
 		Type target = data[index];
 		if (target == Type::EMPTY)
 		{
-			moves.push_back(Move(piece, x, y, x, y + 1, target));
+			if (y == 6)
+				moves.push_back(Move(Type::B_QUEEN, x, y, x, y + 1, target));
+			else
+				moves.push_back(Move(piece, x, y, x, y + 1, target));
+
 			if (y == 1)
 			{
 				target = data[index + 8];
@@ -202,14 +227,30 @@ std::vector<Move> Board::getPossibleMoves(int x, int y)
 		}
 
 		index = this->getIndex(x - 1, y + 1);
-		target = data[index];
-		if ((int)target > (int)Type::W_PAWN&& target != Type::EMPTY)
-			moves.push_back(Move(piece, x, y, x - 1, y + 1, target));
+		if (index != -1)
+		{
+			target = data[index];
+			if (((int)target >= (int)Type::W_PAWN) && (target != Type::EMPTY))
+			{
+				if (y == 6)
+					moves.push_back(Move(Type::B_QUEEN, x, y, x - 1, y + 1, target));
+				else
+					moves.push_back(Move(piece, x, y, x - 1, y + 1, target));
+			}
+		}
 
 		index = this->getIndex(x + 1, y + 1);
-		target = data[index];
-		if ((int)target > (int)Type::W_PAWN&& target != Type::EMPTY)
-			moves.push_back(Move(piece, x, y, x + 1, y + 1, target));
+		if (index != -1)
+		{
+			target = data[index];
+			if (((int)target >= (int)Type::W_PAWN) && (target != Type::EMPTY))
+			{
+				if (y == 6)
+					moves.push_back(Move(Type::B_QUEEN, x, y, x + 1, y + 1, target));
+				else
+					moves.push_back(Move(piece, x, y, x + 1, y + 1, target));
+			}
+		}
 	}
 	else if (piece == Type::B_BISHOP || piece == Type::W_BISHOP)
 	{
@@ -374,8 +415,6 @@ std::vector<Move> Board::getAllMoves(int player)
 				std::vector<Move> m = this->getPossibleMoves(i, j);
 				moves.insert(moves.end(), m.begin(), m.end());
 			}
-			// std::vector<Move> m = this->getPossibleMoves(i, j);
-			// moves.insert(moves.end(), m.begin(), m.end());
 		}
 	}
 	return moves;
@@ -502,4 +541,100 @@ State Board::isChecked()
 		}
 	}
 	return _state;
+}
+
+std::vector<Board*> Board::getChilds()
+{
+	std::vector<Board*> childs = std::vector<Board*>();
+	std::vector<Move> moves = this->getAllMoves(this->currentPlayer);
+	for (int i = moves.size() - 1; i >= 0; i--)
+	{
+		bool add = true;
+		Move& move = moves[i];
+		Board* child = new Board(*this);
+		child->doMove(move, false);
+		State childState = child->isChecked();
+
+		std::vector<Move> childMoves = child->getAllMoves(child->currentPlayer);
+		for (int j = 0; j < childMoves.size(); j++)
+		{
+			if (child->currentPlayer == 0 && childState == State::BLACK_CHECK)
+			{
+				moves.erase(moves.begin() + i);
+				add = false;
+				break;
+			}
+			else if (child->currentPlayer == 1 && childState == State::WHITE_CHECK)
+			{
+				moves.erase(moves.begin() + i);
+				add = false;
+				break;
+			}
+		}
+		if (add)
+		{
+			childs.push_back(child);
+		}
+		else
+		{
+			delete child;
+		}
+	}
+
+	for (Board* child : childs)
+	{
+		child->state = child->getBoardState();
+	}
+
+	return childs;
+}
+
+int32_t Board::evaluateBoard()
+{
+	int32_t score = 0;
+
+	if (state == State::WHITE_MATE) return INT32_MIN;
+	if (state == State::BLACK_MATE) return INT32_MAX;
+
+	for (int i = 0; i < 64; i++)
+	{
+		Type piece = data[i];
+		switch (piece)
+		{
+		case Type::B_PAWN:
+			score -= 100;
+			break;
+		case Type::B_ROOK:
+			score -= 500;
+			break;
+		case Type::B_BISHOP:
+			score -= 300;
+			break;
+		case Type::B_KNIGHT:
+			score -= 300;
+			break;
+		case Type::B_QUEEN:
+			score -= 900;
+			break;
+		case Type::W_PAWN:
+			score += 100;
+			break;
+		case Type::W_ROOK:
+			score += 500;
+			break;
+		case Type::W_BISHOP:
+			score += 300;
+			break;
+		case Type::W_KNIGHT:
+			score += 300;
+			break;
+		case Type::W_QUEEN:
+			score += 900;
+			break;
+		}
+	}
+
+	score += this->getAllMoves(0).size() - this->getAllMoves(1).size();
+
+	return score;
 }

@@ -62,7 +62,9 @@ public:
 	void filterMoves(std::vector<Move>& moves);
 	State getBoardState();
 	State isChecked();
-	float evaluateBoard();
+
+	std::vector<Board*> getChilds();
+	int32_t evaluateBoard();
 
 	inline int getIndex(int x, int y)
 	{

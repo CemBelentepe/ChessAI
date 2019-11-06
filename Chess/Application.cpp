@@ -3,6 +3,8 @@
 #include <string>
 
 #include "Board.h"
+#include "Minimax.h"
+#include "AlphaBeta.h"
 
 int fps_reset = 10;
 
@@ -13,7 +15,7 @@ void showFPS(sf::RenderWindow& window, sf::Text& fpsText, sf::Clock& clock, int 
 
 int main()
 {
-	sf::RenderWindow window(sf::VideoMode::getFullscreenModes()[0], "Chess!", sf::Style::Default);
+	sf::RenderWindow window(sf::VideoMode::getFullscreenModes()[0], "Chess!", sf::Style::Fullscreen);
 	window.setKeyRepeatEnabled(false);
 	window.setFramerateLimit(60);
 	sf::Clock clock;
@@ -60,10 +62,21 @@ int main()
 		// RENDER HERE
 		drawBackground(window, &textures[12], &textures[13]);
 
-		if (sf::Mouse::isButtonPressed(sf::Mouse::Left))
-			board.clickTile(sf::Mouse::getPosition().x / 128, sf::Mouse::getPosition().y / 128);
-		if (sf::Mouse::isButtonPressed(sf::Mouse::Right))
-			board.clickTile(-1, -1);
+		if (board.currentPlayer == 0)
+		{
+			if (sf::Mouse::isButtonPressed(sf::Mouse::Left))
+				board.clickTile(sf::Mouse::getPosition(window).x / 128, sf::Mouse::getPosition(window).y / 128);
+			if (sf::Mouse::isButtonPressed(sf::Mouse::Right))
+				board.clickTile(-1, -1);
+		}
+		else
+		{
+			board.currentPlayer = 0;
+			// Board* aiMove = minimax(&board, board.currentPlayer, 3);
+			Board* aiMove = alpha_beta(&board, board.currentPlayer, INT32_MIN, INT32_MAX, 3);
+			board = *aiMove;
+			board.currentPlayer = 0;
+		}
 
 		board.displayBoard(window, textures);
 		drawUtils(window, board, text);
