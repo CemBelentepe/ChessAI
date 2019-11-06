@@ -6,16 +6,21 @@
 #include "Minimax.h"
 #include "AlphaBeta.h"
 
+const int player = 0;
+const bool reverseScreen = false;
 int fps_reset = 10;
+
+std::vector<Board> history = std::vector<Board>();
 
 void loadTextures(sf::Texture* textures);
 void drawBackground(sf::RenderWindow& window, sf::Texture* t_black, sf::Texture* t_white);
 void drawUtils(sf::RenderWindow& window, Board& board, sf::Text& text);
 void showFPS(sf::RenderWindow& window, sf::Text& fpsText, sf::Clock& clock, int n, bool update);
+void reverseBoard(int n, Board& board);
 
 int main()
 {
-	sf::RenderWindow window(sf::VideoMode::getFullscreenModes()[0], "Chess!", sf::Style::Fullscreen);
+	sf::RenderWindow window(sf::VideoMode::getFullscreenModes()[0], "Chess!", sf::Style::Default);
 	window.setKeyRepeatEnabled(false);
 	window.setFramerateLimit(60);
 	sf::Clock clock;
@@ -30,6 +35,7 @@ int main()
 
 	// Board init
 	Board board = Board();
+	history.push_back(board);
 
 	sf::Text text = sf::Text();
 	text.setFont(font);
@@ -54,6 +60,19 @@ int main()
 			{
 				if (e.key.code == sf::Keyboard::Escape)
 					window.close();
+				if (e.key.code == sf::Keyboard::Z)
+				{
+					if (history.size() > 2)
+					{
+						board = history[history.size() - 3];
+						history.erase(history.end() - 2, history.end());
+					}
+					else
+					{
+						board = history[0];
+						history.erase(history.begin() + 1, history.end());
+					}
+				}
 			}
 		}
 
@@ -62,23 +81,43 @@ int main()
 		// RENDER HERE
 		drawBackground(window, &textures[12], &textures[13]);
 
-		if (board.currentPlayer == 0)
+		if (board.currentPlayer == player)
 		{
 			if (sf::Mouse::isButtonPressed(sf::Mouse::Left))
-				board.clickTile(sf::Mouse::getPosition(window).x / 128, sf::Mouse::getPosition(window).y / 128);
+			{
+				bool moved;
+				if (reverseScreen)
+				{
+					moved = board.clickTile(7 - sf::Mouse::getPosition(window).x / 128, 7 - sf::Mouse::getPosition(window).y / 128);
+				}
+				else
+				{
+					moved = board.clickTile(sf::Mouse::getPosition(window).x / 128, sf::Mouse::getPosition(window).y / 128);
+				}
+				if (moved)
+				{
+					history.push_back(Board(board));
+				}
+			}
 			if (sf::Mouse::isButtonPressed(sf::Mouse::Right))
 				board.clickTile(-1, -1);
 		}
 		else
 		{
-			board.currentPlayer = 0;
+			board.currentPlayer = player;
 			// Board* aiMove = minimax(&board, board.currentPlayer, 3);
 			Board* aiMove = alpha_beta(&board, board.currentPlayer, INT32_MIN, INT32_MAX, 3);
+			aiMove->currentPlayer = player;
 			board = *aiMove;
-			board.currentPlayer = 0;
+			history.push_back(board);
 		}
 
-		board.displayBoard(window, textures);
+		if (board.state > State::BLACK_CHECK)
+		{
+			board.currentPlayer = -1;
+		}
+
+		board.displayBoard(window, textures, reverseScreen);
 		drawUtils(window, board, text);
 		// showFPS(window, fpsText, clock, n, n==0);
 
@@ -112,6 +151,9 @@ void drawUtils(sf::RenderWindow& window, Board& board, sf::Text& text)
 	case State::BLACK_MATE:
 		stream << "White Won!";
 		break;
+	case State::TIE:
+		stream << "Tie!";
+		break;
 	}
 	text.setString(stream.str());
 	window.draw(text);
@@ -135,15 +177,31 @@ void showFPS(sf::RenderWindow& window, sf::Text& fpsText, sf::Clock& clock, int 
 	window.draw(fpsText);
 }
 
+void reverseBoard(int n, Board& board)
+{
+	if (history.size() > n)
+	{
+		board = history[history.size() - n - 1];
+		history.erase(history.end() - n, history.end());
+	}
+	else
+	{
+		board = history[0];
+		history.erase(history.begin() + 1, history.end());
+	}
+}
+
 void drawBackground(sf::RenderWindow& window, sf::Texture* t_white, sf::Texture* t_black)
 {
 	for (int i = 0; i < 8; i++)
 	{
 		for (int j = 0; j < 8; j++)
 		{
+			int y = j;
+			if (reverseScreen) y = 7 - y;
 			sf::Sprite tile(*t_black);
-			tile.setPosition(i * 128, j * 128);
-			if ((i + j) % 2 == 0)
+			tile.setPosition(i * 128, y * 128);
+			if ((i + y) % 2 == 0)
 			{
 				tile.setTexture(*t_white);
 			}

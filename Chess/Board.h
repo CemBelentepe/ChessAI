@@ -11,7 +11,7 @@ enum class Type
 
 enum class State
 {
-	ON_GAME, WHITE_CHECK, BLACK_CHECK, BLACK_MATE, WHITE_MATE
+	ON_GAME, WHITE_CHECK, BLACK_CHECK, BLACK_MATE, WHITE_MATE, TIE
 };
 
 struct Move
@@ -52,8 +52,8 @@ public:
 
 	Board();
 
-	void displayBoard(sf::RenderWindow& window, sf::Texture* textures);
-	void clickTile(int x, int y);
+	void displayBoard(sf::RenderWindow& window, sf::Texture* textures, bool reverseScreen);
+	bool clickTile(int x, int y);
 	void doMove(Move move, bool evaluate_mate);
 
 	std::vector<Move> getPossibleMoves(int x, int y);

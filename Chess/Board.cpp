@@ -14,7 +14,7 @@ Board::Board()
 	this->state = State::ON_GAME;
 }
 
-void Board::displayBoard(sf::RenderWindow& window, sf::Texture* textures)
+void Board::displayBoard(sf::RenderWindow& window, sf::Texture* textures, bool reverseScreen)
 {
 	for (int i = 0; i < 64; i++)
 	{
@@ -25,20 +25,26 @@ void Board::displayBoard(sf::RenderWindow& window, sf::Texture* textures)
 			sf::Sprite sprite(texture);
 			sprite.setOrigin(texture.getSize().x / 2, texture.getSize().y / 2);
 			sprite.scale(0.9f, 0.9f);
-			sprite.setPosition((i % 8) * 128 + 64, (i / 8) * 128 + 64);
+			if (reverseScreen)
+				sprite.setPosition((7 - (i % 8)) * 128 + 64, (7 - (i / 8)) * 128 + 64);
+			else
+				sprite.setPosition((i % 8) * 128 + 64, (i / 8) * 128 + 64);
 			window.draw(sprite);
 		}
 	}
 	for (Move& move : this->selectedMoves)
 	{
 		sf::CircleShape shape(16, 32);
-		shape.setPosition(move.end_x * 128 + 48, move.end_y * 128 + 48);
+		if (reverseScreen)
+			shape.setPosition((7 - move.end_x) * 128 + 48, (7 - move.end_y) * 128 + 48);
+		else
+			shape.setPosition(move.end_x * 128 + 48, move.end_y * 128 + 48);
 		shape.setFillColor(sf::Color::Yellow);
 		window.draw(shape);
 	}
 }
 
-void Board::clickTile(int x, int y)
+bool Board::clickTile(int x, int y)
 {
 	if (x < 0 && y < 0)
 	{
@@ -73,9 +79,11 @@ void Board::clickTile(int x, int y)
 			if (flag)
 			{
 				this->doMove(move, true);
+				return true;
 			}
 		}
 	}
+	return false;
 }
 
 void Board::doMove(Move move, bool evaluate_mate)
@@ -148,7 +156,8 @@ void Board::doMove(Move move, bool evaluate_mate)
 			blackCastling1 = false;
 		}
 	}
-
+	
+	std::vector<Board> b;
 	this->clickTile(-1, -1);
 	if (evaluate_mate) this->state = this->getBoardState();
 	else this->state = this->isChecked();
@@ -477,7 +486,7 @@ State Board::getBoardState()
 			break;
 		}
 	}
-	if ((_state == State::BLACK_CHECK && currentPlayer == 1) || (_state == State::WHITE_CHECK && currentPlayer == 0))
+
 	{
 		std::vector<Move> curr_moves = this->getAllMoves(currentPlayer);
 		for (int i = curr_moves.size() - 1; i >= 0; i--)
@@ -487,33 +496,38 @@ State Board::getBoardState()
 			child->doMove(move, false);
 			State childState = child->isChecked();
 
-			if (childState == State::ON_GAME) continue;
-
-			std::vector<Move> childMoves = child->getAllMoves(child->currentPlayer);
-			for (int j = 0; j < childMoves.size(); j++)
+			if (childState != State::ON_GAME)
 			{
-				if (child->currentPlayer == 0 && childState == State::BLACK_CHECK)
+				std::vector<Move> childMoves = child->getAllMoves(child->currentPlayer);
+				for (int j = 0; j < childMoves.size(); j++)
 				{
-					curr_moves.erase(curr_moves.begin() + i);
-					break;
-				}
-				else if (child->currentPlayer == 1 && childState == State::WHITE_CHECK)
-				{
-					curr_moves.erase(curr_moves.begin() + i);
-					break;
+					if (child->currentPlayer == 0 && childState == State::BLACK_CHECK)
+					{
+						curr_moves.erase(curr_moves.begin() + i);
+						break;
+					}
+					else if (child->currentPlayer == 1 && childState == State::WHITE_CHECK)
+					{
+						curr_moves.erase(curr_moves.begin() + i);
+						break;
+					}
 				}
 			}
 			delete child;
 		}
 		if (curr_moves.size() == 0)
 		{
-			if (_state == State::BLACK_CHECK)
+			if (_state == State::BLACK_CHECK && currentPlayer == 1)
 			{
 				_state = State::WHITE_MATE;
 			}
-			else
+			else if (_state == State::WHITE_CHECK && currentPlayer == 0)
 			{
 				_state = State::BLACK_MATE;
+			}
+			else
+			{
+				_state = State::TIE;
 			}
 		}
 	}

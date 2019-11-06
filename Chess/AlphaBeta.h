@@ -3,7 +3,7 @@
 
 Board* alpha_beta(Board* parent, int player, int32_t alpha, int32_t beta, int depth)
 {
-	if (depth == 0 || parent->state == State::WHITE_MATE || parent->state == State::BLACK_MATE) return parent;
+	if (depth == 0 || parent->state == State::WHITE_MATE || parent->state == State::BLACK_MATE || parent->state == State::TIE) return parent;
 
 	std::vector<Board*> childs = parent->getChilds();
 
@@ -32,10 +32,6 @@ Board* alpha_beta(Board* parent, int player, int32_t alpha, int32_t beta, int de
 			if (i == selected) continue;
 			delete childs[i];
 		}
-		if (selected == -1)
-		{
-			__debugbreak();
-		}
 		return childs[selected];
 	}
 	else
@@ -63,12 +59,6 @@ Board* alpha_beta(Board* parent, int player, int32_t alpha, int32_t beta, int de
 			if (i == selected) continue;
 			delete childs[i];
 		}
-
-		if (selected == -1)
-		{
-			__debugbreak();
-		}
-
 		return childs[selected];
 	}
 
