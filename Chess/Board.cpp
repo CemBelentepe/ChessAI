@@ -156,12 +156,13 @@ void Board::doMove(Move move, bool evaluate_mate)
 			blackCastling1 = false;
 		}
 	}
-	
-	std::vector<Board> b;
+
+
 	this->clickTile(-1, -1);
 	if (evaluate_mate) this->state = this->getBoardState();
 	else this->state = this->isChecked();
 	this->currentPlayer = (this->currentPlayer + 1) % 2;
+	this->lastMove = move;
 }
 
 std::vector<Move> Board::getPossibleMoves(int x, int y)
@@ -443,7 +444,7 @@ void Board::filterMoves(std::vector<Move>& moves)
 	for (int i = moves.size() - 1; i >= 0; i--)
 	{
 		Move& move = moves[i];
-		Board* child = new Board(*this);
+		std::shared_ptr<Board> child(new Board(*this));
 		child->doMove(move, false);
 		State childState = child->state;
 
@@ -463,7 +464,6 @@ void Board::filterMoves(std::vector<Move>& moves)
 				break;
 			}
 		}
-		delete child;
 	}
 }
 
@@ -557,15 +557,15 @@ State Board::isChecked()
 	return _state;
 }
 
-std::vector<Board*> Board::getChilds()
+std::vector<std::shared_ptr<Board>> Board::getChilds()
 {
-	std::vector<Board*> childs = std::vector<Board*>();
+	std::vector<std::shared_ptr<Board>> childs = std::vector<std::shared_ptr<Board>>();
 	std::vector<Move> moves = this->getAllMoves(this->currentPlayer);
 	for (int i = moves.size() - 1; i >= 0; i--)
 	{
 		bool add = true;
 		Move& move = moves[i];
-		Board* child = new Board(*this);
+		std::shared_ptr<Board> child(new Board(*this));
 		child->doMove(move, false);
 		State childState = child->isChecked();
 
@@ -589,17 +589,12 @@ std::vector<Board*> Board::getChilds()
 		{
 			childs.push_back(child);
 		}
-		else
-		{
-			delete child;
-		}
 	}
 
-	for (Board* child : childs)
+	for (std::shared_ptr<Board> child : childs)
 	{
 		child->state = child->getBoardState();
 	}
-
 	return childs;
 }
 
@@ -609,46 +604,56 @@ int32_t Board::evaluateBoard()
 
 	if (state == State::WHITE_MATE) return INT32_MIN;
 	if (state == State::BLACK_MATE) return INT32_MAX;
-
+	if (state == State::TIE) return 0;
+	
 	for (int i = 0; i < 64; i++)
 	{
 		Type piece = data[i];
 		switch (piece)
 		{
 		case Type::B_PAWN:
-			score -= 100;
+			score -= 100 + this->getPossibleMoves(i % 8, i / 8).size();
 			break;
 		case Type::B_ROOK:
-			score -= 500;
+			score -= 500 + 5 * (this->getPossibleMoves(i % 8, i / 8).size());
 			break;
 		case Type::B_BISHOP:
-			score -= 300;
+			score -= 300 + 3 * (this->getPossibleMoves(i % 8, i / 8).size());
 			break;
 		case Type::B_KNIGHT:
-			score -= 300;
+			score -= 300 + 3 * (this->getPossibleMoves(i % 8, i / 8).size());
 			break;
 		case Type::B_QUEEN:
-			score -= 900;
+			score -= 900 + 9 * (this->getPossibleMoves(i % 8, i / 8).size());
+			break;
+		case Type::B_KING:
+			score -= 2 * (this->getPossibleMoves(i % 8, i / 8).size());
 			break;
 		case Type::W_PAWN:
-			score += 100;
+			score += 100 + this->getPossibleMoves(i % 8, i / 8).size();
 			break;
 		case Type::W_ROOK:
-			score += 500;
+			score += 500 + 5 * (this->getPossibleMoves(i % 8, i / 8).size());
 			break;
 		case Type::W_BISHOP:
-			score += 300;
+			score += 300 + 3 * (this->getPossibleMoves(i % 8, i / 8).size());
 			break;
 		case Type::W_KNIGHT:
-			score += 300;
+			score += 300 + 3 * (this->getPossibleMoves(i % 8, i / 8).size());
 			break;
 		case Type::W_QUEEN:
-			score += 900;
+			score += 900 + 9 * (this->getPossibleMoves(i % 8, i / 8).size());
+		break;
+		case Type::W_KING:
+			score += 2 * (this->getPossibleMoves(i % 8, i / 8).size());
 			break;
 		}
 	}
-
+	
+	if (state == State::BLACK_CHECK) score -= 1500;
+	if (state == State::WHITE_CHECK) score += 1500;
+	
 	score += this->getAllMoves(0).size() - this->getAllMoves(1).size();
-
+	
 	return score;
 }

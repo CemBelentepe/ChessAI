@@ -1,11 +1,11 @@
 #pragma once
 #include "Board.h"
 
-Board* minimax(Board* parent, int player, int depth)
+std::shared_ptr<Board> minimax(std::shared_ptr<Board> parent, int player, int depth)
 {
 	if (depth == 0 || parent->state == State::WHITE_MATE || parent->state == State::BLACK_MATE) return parent;
 
-	std::vector<Board*> childs = parent->getChilds();
+	std::vector<std::shared_ptr<Board>> childs = parent->getChilds();
 
 	if (parent->currentPlayer == 1)
 	{
@@ -13,7 +13,7 @@ Board* minimax(Board* parent, int player, int depth)
 		int32_t val = INT32_MIN;
 		for (int i = 0; i < childs.size(); i++)
 		{
-			Board* child = minimax(childs[i], childs[i]->currentPlayer, depth-1);
+			std::shared_ptr<Board> child = minimax(childs[i], childs[i]->currentPlayer, depth-1);
 			int32_t cval = child->evaluateBoard();
 			if (cval > val)
 			{
@@ -29,7 +29,7 @@ Board* minimax(Board* parent, int player, int depth)
 		int32_t val = INT32_MAX;
 		for (int i = 0; i < childs.size(); i++)
 		{
-			Board* child = minimax(childs[i], childs[i]->currentPlayer, depth - 1);
+			std::shared_ptr<Board> child = minimax(childs[i], childs[i]->currentPlayer, depth - 1);
 			int32_t cval = child->evaluateBoard();
 			if (cval < val)
 			{

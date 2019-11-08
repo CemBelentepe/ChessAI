@@ -1,4 +1,7 @@
 #include <SFML/Graphics.hpp>
+#include <SFML/System.hpp>
+#include <functional>
+#include <iostream>
 #include <sstream>
 #include <string>
 
@@ -7,34 +10,41 @@
 #include "AlphaBeta.h"
 
 const int player = 0;
-const bool reverseScreen = false;
+const bool reverseScreen = true;
+const int depth = 3;
 int fps_reset = 10;
 
 std::vector<Board> history = std::vector<Board>();
 
 void loadTextures(sf::Texture* textures);
-void drawBackground(sf::RenderWindow& window, sf::Texture* t_black, sf::Texture* t_white);
+void drawBackground(sf::RenderWindow& window, sf::Texture* textures, Board& board);
 void drawUtils(sf::RenderWindow& window, Board& board, sf::Text& text);
 void showFPS(sf::RenderWindow& window, sf::Text& fpsText, sf::Clock& clock, int n, bool update);
 void reverseBoard(int n, Board& board);
 
+bool thinking = false;
+bool found = false;
+
+auto boardPtr = std::make_shared<Board>();
+void think(int depth);
+
 int main()
 {
-	sf::RenderWindow window(sf::VideoMode::getFullscreenModes()[0], "Chess!", sf::Style::Default);
+	sf::RenderWindow window(sf::VideoMode::getFullscreenModes()[0], "Chess!", sf::Style::Fullscreen);
 	window.setKeyRepeatEnabled(false);
 	window.setFramerateLimit(60);
 	sf::Clock clock;
 	int n = 0;
 
 	// Texture init
-	sf::Texture* textures = new sf::Texture[14];
+	sf::Texture* textures = new sf::Texture[16];
 	loadTextures(textures);
 
 	sf::Font font;
 	font.loadFromFile("Resources/arial.ttf");
 
 	// Board init
-	Board board = Board();
+	Board& board = *boardPtr;
 	history.push_back(board);
 
 	sf::Text text = sf::Text();
@@ -46,6 +56,11 @@ int main()
 	fpsText.setFont(font);
 	fpsText.setCharacterSize(32);
 	fpsText.setPosition(1050, 50);
+
+	// Threading
+	std::shared_ptr<Board> aiMove;
+	sf::Thread startAlphaBeta(std::bind(think, depth));
+
 
 	// Main Loop
 	while (window.isOpen())
@@ -59,8 +74,10 @@ int main()
 			else if (e.type == sf::Event::KeyPressed)
 			{
 				if (e.key.code == sf::Keyboard::Escape)
+				{
 					window.close();
-				if (e.key.code == sf::Keyboard::Z)
+				}
+				if (e.key.code == sf::Keyboard::Z && !thinking)
 				{
 					if (history.size() > 2)
 					{
@@ -79,37 +96,40 @@ int main()
 		window.clear();
 
 		// RENDER HERE
-		drawBackground(window, &textures[12], &textures[13]);
+		drawBackground(window, textures, board);
 
-		if (board.currentPlayer == player)
+		if (board.currentPlayer == player && !thinking)
 		{
 			if (sf::Mouse::isButtonPressed(sf::Mouse::Left))
 			{
 				bool moved;
 				if (reverseScreen)
-				{
 					moved = board.clickTile(7 - sf::Mouse::getPosition(window).x / 128, 7 - sf::Mouse::getPosition(window).y / 128);
-				}
 				else
-				{
 					moved = board.clickTile(sf::Mouse::getPosition(window).x / 128, sf::Mouse::getPosition(window).y / 128);
-				}
+				
 				if (moved)
-				{
 					history.push_back(Board(board));
-				}
 			}
 			if (sf::Mouse::isButtonPressed(sf::Mouse::Right))
 				board.clickTile(-1, -1);
 		}
 		else
 		{
-			board.currentPlayer = player;
-			// Board* aiMove = minimax(&board, board.currentPlayer, 3);
-			Board* aiMove = alpha_beta(&board, board.currentPlayer, INT32_MIN, INT32_MAX, 3);
-			aiMove->currentPlayer = player;
-			board = *aiMove;
-			history.push_back(board);
+			if (!thinking && !found)
+			{
+				board.currentPlayer = player;
+				// Board* aiMove = minimax(&board, board.currentPlayer, 3);
+				thinking = true;
+				startAlphaBeta.launch();
+			}
+			else if (found)
+			{
+				startAlphaBeta.wait();
+				board.currentPlayer = player;
+				found = false;
+				history.push_back(board);
+			}
 		}
 
 		if (board.state > State::BLACK_CHECK)
@@ -124,12 +144,16 @@ int main()
 		window.display();
 		n = (n + 1) % fps_reset;
 	}
+
+
+	startAlphaBeta.terminate();
+	return 0;
 }
 
 void drawUtils(sf::RenderWindow& window, Board& board, sf::Text& text)
 {
 	std::ostringstream stream;
-	if (board.currentPlayer == 0)
+	if ((board.currentPlayer == 0 && !thinking) || (board.currentPlayer == 1 && thinking))
 		stream << "Player: White\n";
 	else
 		stream << "Player: Black\n";
@@ -155,6 +179,7 @@ void drawUtils(sf::RenderWindow& window, Board& board, sf::Text& text)
 		stream << "Tie!";
 		break;
 	}
+	stream << "\n\nSearched Possibilities: " << alphaBetas;
 	text.setString(stream.str());
 	window.draw(text);
 }
@@ -191,19 +216,45 @@ void reverseBoard(int n, Board& board)
 	}
 }
 
-void drawBackground(sf::RenderWindow& window, sf::Texture* t_white, sf::Texture* t_black)
+void think(int depth)
+{
+	found = false;
+	thinking = true;
+	alphaBetas = 0;
+	*boardPtr = *alpha_beta(boardPtr, INT32_MIN, INT32_MAX, depth);
+	thinking = false;
+	found = true;
+}
+
+void drawBackground(sf::RenderWindow& window, sf::Texture* textures, Board& board)
 {
 	for (int i = 0; i < 8; i++)
 	{
 		for (int j = 0; j < 8; j++)
 		{
+			int x = i;
 			int y = j;
-			if (reverseScreen) y = 7 - y;
-			sf::Sprite tile(*t_black);
-			tile.setPosition(i * 128, y * 128);
-			if ((i + y) % 2 == 0)
+			if (reverseScreen)
 			{
-				tile.setTexture(*t_white);
+				y = 7 - y;
+				x = 7 - x;
+			}
+			sf::Sprite tile(textures[14]);
+			tile.setPosition(x * 128, y * 128);
+			if ((x + y) % 2 == 1)
+			{
+				tile.setTexture(textures[15]);
+			}
+			if ((board.lastMove.start_x == i && board.lastMove.start_y == j) || (board.lastMove.end_x == i && board.lastMove.end_y == j))
+			{
+				if ((x + y) % 2 == 1)
+				{
+					tile.setTexture(textures[13]);
+				}
+				else
+				{
+					tile.setTexture(textures[12]);
+				}
 			}
 			window.draw(tile);
 		}
@@ -226,4 +277,6 @@ void loadTextures(sf::Texture* textures)
 	textures[11].loadFromFile("Resources/w_king.png");
 	textures[12].loadFromFile("Resources/square gray light.png");
 	textures[13].loadFromFile("Resources/square gray dark.png");
+	textures[14].loadFromFile("Resources/square brown light.png");
+	textures[15].loadFromFile("Resources/square brown dark.png");
 }

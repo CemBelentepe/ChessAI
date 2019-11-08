@@ -1,11 +1,13 @@
 #pragma once
 #include "Board.h"
 
-Board* alpha_beta(Board* parent, int player, int32_t alpha, int32_t beta, int depth)
+int alphaBetas;
+std::shared_ptr<Board> alpha_beta(std::shared_ptr<Board> parent, int32_t alpha, int32_t beta, int depth)
 {
+	alphaBetas++;
 	if (depth == 0 || parent->state == State::WHITE_MATE || parent->state == State::BLACK_MATE || parent->state == State::TIE) return parent;
 
-	std::vector<Board*> childs = parent->getChilds();
+	std::vector<std::shared_ptr<Board>> childs = parent->getChilds();
 
 	if (parent->currentPlayer == 1)
 	{
@@ -13,7 +15,7 @@ Board* alpha_beta(Board* parent, int player, int32_t alpha, int32_t beta, int de
 		int32_t val = INT32_MIN;
 		for (int i = 0; i < childs.size(); i++)
 		{
-			Board* child = alpha_beta(childs[i], childs[i]->currentPlayer, alpha, beta, depth - 1);
+			std::shared_ptr<Board> child = alpha_beta(childs[i], alpha, beta, depth - 1);
 			int32_t cval = child->evaluateBoard();
 			if (cval >= val)
 			{
@@ -27,11 +29,6 @@ Board* alpha_beta(Board* parent, int player, int32_t alpha, int32_t beta, int de
 			}
 		}
 
-		for (int i = 0; i < childs.size(); i++)
-		{
-			if (i == selected) continue;
-			delete childs[i];
-		}
 		return childs[selected];
 	}
 	else
@@ -40,7 +37,7 @@ Board* alpha_beta(Board* parent, int player, int32_t alpha, int32_t beta, int de
 		int32_t val = INT32_MAX;
 		for (int i = 0; i < childs.size(); i++)
 		{
-			Board* child = alpha_beta(childs[i], childs[i]->currentPlayer, alpha, beta, depth - 1);
+			std::shared_ptr<Board> child = alpha_beta(childs[i], alpha, beta, depth - 1);
 			int32_t cval = child->evaluateBoard();
 			if (cval <= val)
 			{
@@ -53,17 +50,6 @@ Board* alpha_beta(Board* parent, int player, int32_t alpha, int32_t beta, int de
 				break;
 			}
 		}
-
-		for (int i = 0; i < childs.size(); i++)
-		{
-			if (i == selected) continue;
-			delete childs[i];
-		}
 		return childs[selected];
-	}
-
-	for (int i = 0; i < childs.size(); i++)
-	{
-		delete childs[i];
 	}
 }

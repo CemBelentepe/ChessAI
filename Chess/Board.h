@@ -26,6 +26,20 @@ struct Move
 		: piece(piece), eaten(eaten), start_x(start_x), start_y(start_y), end_x(end_x), end_y(end_y), isCastling(isCastling)
 	{
 	}
+	Move()
+		: piece(Type::EMPTY), eaten(Type::EMPTY), start_x(-1), start_y(-1), end_x(-1), end_y(-1), isCastling(false)
+	{
+	}
+	friend bool operator==(const Move& left, const Move& right)
+	{
+		return (left.start_x == right.start_x) && (left.end_x == right.end_y);
+	}
+
+	friend std::ostream& operator<<(std::ostream& out, const Move& right)
+	{
+		out << right.start_x << ", " << right.start_y << ": " << right.end_x << ", " << right.end_y;
+		return out;
+	}
 };
 
 class Board
@@ -49,6 +63,7 @@ public:
 	bool whiteCastling0, whiteCastling1;
 	bool blackCastling0, blackCastling1;
 	State state;
+	Move lastMove;
 
 	Board();
 
@@ -63,7 +78,7 @@ public:
 	State getBoardState();
 	State isChecked();
 
-	std::vector<Board*> getChilds();
+	std::vector<std::shared_ptr<Board>> getChilds();
 	int32_t evaluateBoard();
 
 	inline int getIndex(int x, int y)
