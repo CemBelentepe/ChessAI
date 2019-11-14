@@ -86,13 +86,12 @@ public:
 		}
 	}
 
-	template<size_t c, size_t r>
-	static std::shared_ptr<Matrix<c, r>> transpose(std::shared_ptr<Matrix<r, c>> a)
+	static std::shared_ptr<Matrix<rows, cols>> transpose(std::shared_ptr<Matrix<cols, rows>> a)
 	{
-		std::shared_ptr<Matrix<c, r>> result = std::make_shared<Matrix<c, r>>();
-		for (int i = 0; i < r; i++)
+		std::shared_ptr<Matrix<rows, cols>> result = std::make_shared<Matrix<rows, cols>>();
+		for (int i = 0; i < rows; i++)
 		{
-			for (int j = 0; j < c; j++)
+			for (int j = 0; j < cols; j++)
 			{
 				result->data[i][j] = a->data[j][i];
 			}
@@ -100,40 +99,69 @@ public:
 		return result;
 	}
 
-
-	template<size_t r, size_t c>
-	static std::shared_ptr<Matrix<r, c>> substract(std::shared_ptr<Matrix<r, c>> a, std::shared_ptr<Matrix<r, c>> b)
+	static std::shared_ptr<Matrix<rows, cols>> transpose(Matrix<cols, rows>& a)
 	{
-		std::shared_ptr<Matrix<r, c>> result = std::make_shared<Matrix<r, c>>();
-		for (int i = 0; i < r; i++)
+		std::shared_ptr<Matrix<rows, cols>> result = std::make_shared<Matrix<rows, cols>>();
+		for (int i = 0; i < rows; i++)
 		{
-			for (int j = 0; j < c; j++)
+			for (int j = 0; j < cols; j++)
 			{
-				result->data[i][j] = a.data[i][j] - b.data[i][j];
+				result->data[i][j] = a.data[j][i];
 			}
 		}
 		return result;
 	}
 
 
-	template<size_t r, size_t c, rsize_t p>
-	static std::shared_ptr<Matrix<r, c>> multiply(const Matrix<r, p>& a, const Matrix<p, c>& b)
+
+	static std::shared_ptr<Matrix<rows, cols>> substract(std::shared_ptr<Matrix<rows, cols>> a, std::shared_ptr<Matrix<rows, cols>> b)
 	{
-		std::shared_ptr<Matrix<r, c>> result = std::make_shared<Matrix<r, c>>();
-		for (int i = 0; i < r; i++)
+		std::shared_ptr<Matrix<rows, cols>> result = std::make_shared<Matrix<rows, cols>>();
+		for (int i = 0; i < rows; i++)
 		{
-			for (int j = 0; j < c; j++)
+			for (int j = 0; j < cols; j++)
+			{
+				result->data[i][j] = a->data[i][j] - b->data[i][j];
+			}
+		}
+		return result;
+	}
+
+	template<size_t p>
+	static std::shared_ptr<Matrix<rows, cols>> multiply(const Matrix<rows, p>& a, const Matrix<p, cols>& b)
+	{
+		std::shared_ptr<Matrix<rows, cols>> result = std::make_shared<Matrix<rows, cols>>();
+		for (int i = 0; i < rows; i++)
+		{
+			for (int j = 0; j < cols; j++)
 			{
 				float sum = 0;
 				for (int k = 0; k < p; k++)
 				{
 					sum += a.data[i][k] * b.data[k][j];
 				}
-				result->data[i][j];
+				result->data[i][j] = sum;
 			}
 		}
 		return result;
-
 	}
 
+	template<size_t p>
+	static std::shared_ptr<Matrix<rows, cols>> multiply(std::shared_ptr<Matrix<rows, p>> a, std::shared_ptr<Matrix<p, cols>> b)
+	{
+		std::shared_ptr<Matrix<rows, cols>> result = std::make_shared<Matrix<rows, cols>>();
+		for (int i = 0; i < rows; i++)
+		{
+			for (int j = 0; j < cols; j++)
+			{
+				float sum = 0;
+				for (int k = 0; k < p; k++)
+				{
+					sum += a->data[i][k] * b->data[k][j];
+				}
+				result->data[i][j] = sum;
+			}
+		}
+		return result;
+	}
 };

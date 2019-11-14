@@ -59,7 +59,7 @@ public:
 		return result;
 	}
 
-	Matrix<output_nodes, 1> think(std::array<float, input_nodes> input_arr)
+	Matrix<output_nodes, 1>* think(std::array<float, input_nodes> input_arr)
 	{
 		auto inputs = Matrix<input_nodes, 1>(input_arr);
 		auto hidden1 = Matrix<hidden_nodes1, 1>::multiply(weights_ih, inputs);
@@ -74,6 +74,31 @@ public:
 		outputs->addMatrix(bias_o);
 		activate(outputs);
 
+		return outputs;
+	}
+
+	Matrix<output_nodes, 1> train(std::array<float, input_nodes> input_arr, std::shared_ptr<Matrix<output_nodes, 1>> target)
+	{
+		auto inputs = Matrix<input_nodes, 1>(input_arr);
+		auto hidden1 = Matrix<hidden_nodes1, 1>::multiply(weights_ih, inputs);
+		hidden1->addMatrix(bias_h1);
+		activate(hidden1);
+
+		auto hidden2 = Matrix<hidden_nodes2, 1>::multiply(weights_hh, *hidden1);
+		hidden2->addMatrix(bias_h2);
+		activate(hidden2);
+
+		auto outputs = Matrix<output_nodes, 1>::multiply(weights_ho, *hidden2);
+		outputs->addMatrix(bias_o);
+		activate(outputs);
+
+		// Backpropogation
+		auto output_err = Matrix<output_nodes, 1>::substract(outputs, target);
+
+		auto who_t = Matrix<hidden_nodes2, output_nodes>::transpose(weights_ho);
+		auto hidden_err = Matrix<hidden_nodes2, 1>::multiply(who_t, output_err);
+
+		
 		return *outputs;
 	}
 };

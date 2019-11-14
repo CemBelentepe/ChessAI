@@ -37,7 +37,8 @@ struct Move
 
 	friend std::ostream& operator<<(std::ostream& out, const Move& right)
 	{
-		out << right.start_x << ", " << right.start_y << ": " << right.end_x << ", " << right.end_y;
+		out << right.start_x << "-" << right.start_y << ", " << right.end_x << "-" << right.end_y;
+		out << ": " << (int)right.eaten << " is eaten by " << (int)right.piece;
 		return out;
 	}
 };
@@ -81,7 +82,7 @@ public:
 	std::vector<std::shared_ptr<Board>> getChilds();
 	int32_t evaluateBoard();
 
-	std::array<float, 768> nnData();
+	std::array<float, 768>* nnData();
 
 	inline int getIndex(int x, int y)
 	{

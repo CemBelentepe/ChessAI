@@ -128,7 +128,6 @@ void Board::doMove(Move move, bool evaluate_mate)
 		}
 	}
 
-
 	this->clickTile(-1, -1);
 	if (evaluate_mate) this->state = this->getBoardState();
 	else this->state = this->isChecked();
@@ -138,14 +137,12 @@ void Board::doMove(Move move, bool evaluate_mate)
 
 bool Board::doRandomMove(int i)
 {
-	this->state = getBoardState();
-	std::vector<Move> moves = this->getAllMoves(currentPlayer);
-	filterMoves(moves);
-	if (moves.size() > 0)
+	auto childs = this->getChilds();
+	if (childs.size() > 2)
 	{
-		int i = moves.size() * (static_cast<float>(rand()) / static_cast<float>(RAND_MAX));
-		this->doMove(moves[i], true);
-		return true;
+		int i = rand() % (childs.size());
+		this->doMove(childs[i]->lastMove, true);
+		return state < State::BLACK_MATE;
 	}
 	else
 	{
@@ -413,7 +410,7 @@ std::vector<Move> Board::getAllMoves(int player)
 		for (int j = 0; j < 8; j++)
 		{
 			Type& p = data[getIndex(i, j)];
-			if ((player == 0 && p < Type::W_PAWN) || (player == 1 && p >= Type::W_PAWN && p < Type::EMPTY))
+			if ((player == 1 && p < Type::W_PAWN) || (player == 0 && p >= Type::W_PAWN && p < Type::EMPTY))
 			{
 				std::vector<Move> m = this->getPossibleMoves(i, j);
 				moves.insert(moves.end(), m.begin(), m.end());
@@ -446,12 +443,12 @@ void Board::filterMoves(std::vector<Move>& moves)
 		std::vector<Move> childMoves = child->getAllMoves(child->currentPlayer);
 		for (int j = 0; j < childMoves.size(); j++)
 		{
-			if (child->currentPlayer == 1 && childState == State::BLACK_CHECK)
+			if (child->currentPlayer == 0 && childState == State::BLACK_CHECK)
 			{
 				moves.erase(moves.begin() + i);
 				break;
 			}
-			else if (child->currentPlayer == 0 && childState == State::WHITE_CHECK)
+			else if (child->currentPlayer == 1 && childState == State::WHITE_CHECK)
 			{
 				moves.erase(moves.begin() + i);
 				break;
@@ -463,7 +460,7 @@ void Board::filterMoves(std::vector<Move>& moves)
 State Board::getBoardState()
 {
 	State _state = State::ON_GAME;
-	std::vector<Move> moves = this->getAllMoves((currentPlayer + 1) % 2);
+	std::vector<Move> moves = this->getAllMoves(currentPlayer);
 
 	for (int i = 0; i < moves.size(); i++)
 	{
@@ -481,7 +478,7 @@ State Board::getBoardState()
 	}
 
 	{
-		std::vector<Move> curr_moves = this->getAllMoves(currentPlayer);
+		std::vector<Move> curr_moves = this->getAllMoves((currentPlayer + 1) % 2);
 		for (int i = curr_moves.size() - 1; i >= 0; i--)
 		{
 			Move& move = curr_moves[i];
@@ -491,15 +488,15 @@ State Board::getBoardState()
 
 			if (childState != State::ON_GAME)
 			{
-				std::vector<Move> childMoves = child->getAllMoves(child->currentPlayer);
+				std::vector<Move> childMoves = child->getAllMoves((child->currentPlayer + 1) % 2);
 				for (int j = 0; j < childMoves.size(); j++)
 				{
-					if (child->currentPlayer == 0 && childState == State::BLACK_CHECK)
+					if (child->currentPlayer == 1 && childState == State::BLACK_CHECK)
 					{
 						curr_moves.erase(curr_moves.begin() + i);
 						break;
 					}
-					else if (child->currentPlayer == 1 && childState == State::WHITE_CHECK)
+					else if (child->currentPlayer == 0 && childState == State::WHITE_CHECK)
 					{
 						curr_moves.erase(curr_moves.begin() + i);
 						break;
@@ -510,11 +507,11 @@ State Board::getBoardState()
 		}
 		if (curr_moves.size() == 0)
 		{
-			if (_state == State::BLACK_CHECK && currentPlayer == 1)
+			if (_state == State::BLACK_CHECK && currentPlayer == 0)
 			{
 				_state = State::WHITE_MATE;
 			}
-			else if (_state == State::WHITE_CHECK && currentPlayer == 0)
+			else if (_state == State::WHITE_CHECK && currentPlayer == 1)
 			{
 				_state = State::BLACK_MATE;
 			}
@@ -565,13 +562,13 @@ std::vector<std::shared_ptr<Board>> Board::getChilds()
 		std::vector<Move> childMoves = child->getAllMoves(child->currentPlayer);
 		for (int j = 0; j < childMoves.size(); j++)
 		{
-			if (child->currentPlayer == 0 && childState == State::BLACK_CHECK)
+			if (child->currentPlayer == 0 && (childState == State::BLACK_CHECK || childState == State::WHITE_MATE))
 			{
 				moves.erase(moves.begin() + i);
 				add = false;
 				break;
 			}
-			else if (child->currentPlayer == 1 && childState == State::WHITE_CHECK)
+			else if (child->currentPlayer == 1 && (childState == State::WHITE_CHECK || childState == State::BLACK_MATE))
 			{
 				moves.erase(moves.begin() + i);
 				add = false;
@@ -651,17 +648,18 @@ int32_t Board::evaluateBoard()
 	return score;
 }
 
-std::array<float, 768> Board::nnData()
+std::array<float, 768>* Board::nnData()
 {
-	std::array<float, 768> nndata;
+	std::array<float, 768>* nndata = new std::array<float, 768>();
 
 	for (int i = 0; i < 64 * 12; i++)
 	{
-		nndata[i] = 0;
+		(*nndata)[i] = 0;
 	}
 	for (size_t i = 0; i < 64; i++)
 	{
-		nndata[12 * i + (size_t)(data[i])] = 1;
+		if((int)(data[i]) < 12)
+			(*nndata)[12 * i + (size_t)(data[i])] = 1;
 	}
 	return nndata;
 }

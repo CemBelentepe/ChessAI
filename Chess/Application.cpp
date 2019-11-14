@@ -10,7 +10,7 @@
 #include "AlphaBeta.h"
 
 const int player = 0;
-const bool reverseScreen = true;
+const bool reverseScreen = false;
 const int depth = 3;
 int fps_reset = 10;
 
@@ -119,7 +119,6 @@ int main()
 			if (!thinking && !found)
 			{
 				board.currentPlayer = player;
-				// Board* aiMove = minimax(&board, board.currentPlayer, 3);
 				thinking = true;
 				startAlphaBeta.launch();
 			}
