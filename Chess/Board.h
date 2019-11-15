@@ -1,6 +1,8 @@
 #pragma once
 #include <SFML/Graphics.hpp>
 #include <vector>
+#include <array>
+#include "../NeuralNetwork/NeuralNetwork.h"
 
 enum class Type
 {
@@ -79,7 +81,9 @@ public:
 	State isChecked();
 
 	std::vector<std::shared_ptr<Board>> getChilds();
-	int32_t evaluateBoard();
+	int32_t evaluateBoard(NeuralNetwork<768, 128, 64, 1>* nn);
+	int32_t evaluateBoard_old();
+	std::array<float, 768>* nnData();
 
 	inline int getIndex(int x, int y)
 	{

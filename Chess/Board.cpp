@@ -1,5 +1,6 @@
 #include "Board.h"
 #include <iostream>
+#include "../NeuralNetwork/NeuralNetwork.h"
 
 Board::Board()
 {
@@ -598,14 +599,26 @@ std::vector<std::shared_ptr<Board>> Board::getChilds()
 	return childs;
 }
 
-int32_t Board::evaluateBoard()
+int32_t Board::evaluateBoard(NeuralNetwork<768, 128, 64, 1>* nn)
 {
 	int32_t score = 0;
 
 	if (state == State::WHITE_MATE) return INT32_MIN;
 	if (state == State::BLACK_MATE) return INT32_MAX;
 	if (state == State::TIE) return 0;
-	
+
+	auto result = nn->think(*(this->nnData()));
+	return (int)(10000.f * (result.data[0][0] - 0.5f));
+}
+
+int32_t Board::evaluateBoard_old()
+{
+	int32_t score = 0;
+
+	if (state == State::WHITE_MATE) return INT32_MIN;
+	if (state == State::BLACK_MATE) return INT32_MAX;
+	if (state == State::TIE) return 0;
+
 	for (int i = 0; i < 64; i++)
 	{
 		Type piece = data[i];
@@ -643,17 +656,34 @@ int32_t Board::evaluateBoard()
 			break;
 		case Type::W_QUEEN:
 			score += 900 + 9 * (this->getPossibleMoves(i % 8, i / 8).size());
-		break;
+			break;
 		case Type::W_KING:
 			score += 2 * (this->getPossibleMoves(i % 8, i / 8).size());
 			break;
 		}
 	}
-	
+
 	if (state == State::BLACK_CHECK) score -= 1500;
 	if (state == State::WHITE_CHECK) score += 1500;
-	
+
 	score += this->getAllMoves(0).size() - this->getAllMoves(1).size();
-	
+
 	return score;
 }
+
+std::array<float, 768>* Board::nnData()
+{
+	std::array<float, 768>* nndata = new std::array<float, 768>();
+
+	for (int i = 0; i < 64 * 12; i++)
+	{
+		(*nndata)[i] = 0;
+	}
+	for (size_t i = 0; i < 64; i++)
+	{
+		if ((int)(data[i]) < 12)
+			(*nndata)[12 * i + (size_t)(data[i])] = 1;
+	}
+	return nndata;
+}
+

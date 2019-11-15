@@ -1,6 +1,6 @@
 #pragma once
 #include "Board.h"
-
+NeuralNetwork<768, 128, 64, 1>* nn;
 int alphaBetas;
 std::shared_ptr<Board> alpha_beta(std::shared_ptr<Board> parent, int32_t alpha, int32_t beta, int depth)
 {
@@ -16,7 +16,7 @@ std::shared_ptr<Board> alpha_beta(std::shared_ptr<Board> parent, int32_t alpha, 
 		for (int i = 0; i < childs.size(); i++)
 		{
 			std::shared_ptr<Board> child = alpha_beta(childs[i], alpha, beta, depth - 1);
-			int32_t cval = child->evaluateBoard();
+			int32_t cval = child->evaluateBoard(nn);
 			if (cval >= val)
 			{
 				val = cval;
@@ -38,7 +38,7 @@ std::shared_ptr<Board> alpha_beta(std::shared_ptr<Board> parent, int32_t alpha, 
 		for (int i = 0; i < childs.size(); i++)
 		{
 			std::shared_ptr<Board> child = alpha_beta(childs[i], alpha, beta, depth - 1);
-			int32_t cval = child->evaluateBoard();
+			int32_t cval = child->evaluateBoard(nn);
 			if (cval <= val)
 			{
 				val = cval;

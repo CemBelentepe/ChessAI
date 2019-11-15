@@ -202,7 +202,7 @@ public:
 
 	void save(std::string name)
 	{
-		std::ofstream nnFile = std::ofstream();
+		std::ofstream nnFile;
 		nnFile.open(name);
 		for (int i = 0; i < hidden_nodes1; i++)
 		{
@@ -243,5 +243,53 @@ public:
 			nnFile << bias_o.data[i][0] << "\n";
 		}
 		nnFile.close();
+	}
+	void load(std::string name)
+	{
+		std::ifstream file(name);
+		std::string line;
+		if (file.is_open())
+		{
+			int n = 0;
+			while (std::getline(file, line))
+			{
+				if (n < hidden_nodes1 * input_nodes)
+				{
+					weights_ih.data[n / input_nodes][n % input_nodes] = std::atof(line.c_str());
+				}
+				else if (n < hidden_nodes1 * input_nodes + hidden_nodes2 * hidden_nodes1)
+				{
+					int x = n - hidden_nodes1 * input_nodes;
+					weights_hh.data[x / hidden_nodes1][x % hidden_nodes1] = std::atof(line.c_str());
+				}
+				else if (n < hidden_nodes1 * input_nodes + hidden_nodes2 * hidden_nodes1 + output_nodes * hidden_nodes2)
+				{
+					int x = n - hidden_nodes1 * input_nodes - hidden_nodes2 * hidden_nodes1;
+					weights_ho.data[x / hidden_nodes2][x % hidden_nodes2] = std::atof(line.c_str());
+				}
+				else if (n < hidden_nodes1 * input_nodes + hidden_nodes2 * hidden_nodes1 + output_nodes * hidden_nodes2 + hidden_nodes1)
+				{
+					int x = n - hidden_nodes1 * input_nodes - hidden_nodes2 * hidden_nodes1 - output_nodes * hidden_nodes2;
+					bias_h1.data[x][0] = std::atof(line.c_str());
+				}
+				else if (n < hidden_nodes1 * input_nodes + hidden_nodes2 * hidden_nodes1 + output_nodes * hidden_nodes2 + hidden_nodes1 + hidden_nodes2)
+				{
+					int x = n - hidden_nodes1 * input_nodes - hidden_nodes2 * hidden_nodes1 - output_nodes * hidden_nodes2 - hidden_nodes1;
+					bias_h2.data[x][0] = std::atof(line.c_str());
+				}
+				else if (n < hidden_nodes1 * input_nodes + hidden_nodes2 * hidden_nodes1 + output_nodes * hidden_nodes2 + hidden_nodes1 + hidden_nodes2 + output_nodes)
+				{
+					int x = n - hidden_nodes1 * input_nodes - hidden_nodes2 * hidden_nodes1 - output_nodes * hidden_nodes2 - hidden_nodes1 - hidden_nodes2;
+					bias_o.data[x][0] = std::atof(line.c_str());
+				}
+				else
+				{
+					std::cout << "Error" << std::endl;
+				}
+				n++;
+			}
+		}
+
+		file.close();
 	}
 };

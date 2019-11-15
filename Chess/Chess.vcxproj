@@ -82,6 +82,8 @@
     <ClCompile Include="Board.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\NeuralNetwork\Matrix.h" />
+    <ClInclude Include="..\NeuralNetwork\NeuralNetwork.h" />
     <ClInclude Include="AlphaBeta.h" />
     <ClInclude Include="Board.h" />
     <ClInclude Include="Minimax.h" />
@@ -106,6 +108,11 @@
   </ItemGroup>
   <ItemGroup>
     <Font Include="Resources\arial.ttf" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\NeuralNetwork\NeuralNetwork.vcxproj">
+      <Project>{60c499a4-3d4d-476c-b319-9a9ad6c91e67}</Project>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

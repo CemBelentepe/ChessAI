@@ -8,6 +8,7 @@
 #include "Board.h"
 #include "Minimax.h"
 #include "AlphaBeta.h"
+#include "../NeuralNetwork/NeuralNetwork.h"
 
 const int player = 0;
 const bool reverseScreen = false;
@@ -61,6 +62,9 @@ int main()
 	std::shared_ptr<Board> aiMove;
 	sf::Thread startAlphaBeta(std::bind(think, depth));
 
+	// Load ai
+	nn = new NeuralNetwork<768, 128, 64, 1>(0.1f);
+	nn->load("nn_j.txt");
 
 	// Main Loop
 	while (window.isOpen())

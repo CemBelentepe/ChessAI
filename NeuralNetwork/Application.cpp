@@ -18,6 +18,12 @@ int main()
 	// xorProblem();
 	train();
 	// createTrainingData();
+
+	// NeuralNetwork<768, 128, 64, 1>* nn = new NeuralNetwork<768, 128, 64, 1>(0.1f);
+	// nn->load("nn_.txt");
+	// std::cout << "Loaded!!!" << std::endl;
+	// nn->save("test.txt");
+
 	return 0;
 }
 
@@ -50,6 +56,8 @@ void train()
 	std::string line;
 
 	NeuralNetwork<768, 128, 64, 1>* nn = new NeuralNetwork<768, 128, 64, 1>(0.1f);
+	nn->load("nn_.txt");
+	
 	std::vector<std::array<float, 768>> data;
 	std::vector<float> scores;
 
@@ -85,9 +93,10 @@ void train()
 		float total_err = 0;
 		for (int i = 0; i < data.size(); i++)
 		{
+			int n = rand() % data.size();
 			std::shared_ptr<Matrix<1, 1>> target = std::make_shared<Matrix<1, 1>>();
-			target->data[0][0] = scores[i];
-			auto result = nn->train(data[i], target);
+			target->data[0][0] = scores[n];
+			auto result = nn->train(data[n], target);
 			float err = 100.f * (result.data[0][0] - target->data[0][0]) / (target->data[0][0]);
 			total_err += abs(err);
 		}
@@ -100,7 +109,7 @@ void train()
 		std::cout << j << " %" << total_err << std::endl << std::endl;
 
 		std::stringstream name;
-		name << "nn_" << ".txt";
+		name << "nn_j" << ".txt";
 		nn->save(name.str());
 	}
 
