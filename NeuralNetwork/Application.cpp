@@ -1,5 +1,6 @@
 #include <iostream>
 #include <fstream>
+#include <sstream>
 #include <ios>
 #include <string>
 #include <ctime>
@@ -8,25 +9,49 @@
 #include "NNBoard.h"
 #include "NeuralNetwork.h"
 
+void xorProblem();
 void train();
 void createTrainingData();
 
 int main()
 {
+	// xorProblem();
 	train();
 	// createTrainingData();
 	return 0;
 }
 
+void xorProblem()
+{
+	NeuralNetwork<2, 2, 2, 1> nn = NeuralNetwork<2, 2, 2, 1>(0.1f);
+
+	for (int i = 0; i < 500000; i++)
+	{
+		int x = rand() % 2;
+		int y = rand() % 2;
+		int z = (x + y) % 2;
+		std::array<float, 2> input;
+		input[0] = x;
+		input[1] = y;
+		std::shared_ptr<Matrix<1, 1>> target = std::make_shared<Matrix<1, 1>>();
+		target->data[0][0] = z;
+		auto out = nn.train(input, target);
+
+		if (i > 499900)
+			std::cout << out.data[0][0] << ", " << x << ", " << y << ", " << z << std::endl;
+	}
+}
+
 void train()
 {
 	srand(time(NULL));
-	std::ifstream* file = new std::ifstream("data.txt");
+
+	std::ifstream* file = new std::ifstream("data_1.txt");
 	std::string line;
 
 	NeuralNetwork<768, 128, 64, 1>* nn = new NeuralNetwork<768, 128, 64, 1>(0.1f);
 	std::vector<std::array<float, 768>> data;
-	std::vector<int> scores;
+	std::vector<float> scores;
 
 	if (file->is_open())
 	{
@@ -46,19 +71,39 @@ void train()
 				c++;
 			}
 			n++;
-			scores.push_back(std::atoi(line.substr(c, line.length() - 1).c_str()));
+			float x = ((float)std::atoi(line.substr(c, line.length() - 1).c_str()) / 10000.0f) + 0.5f;
+			scores.push_back(x);
 			// std::cout << n << std::endl;
 		}
 	}
 
+	file->close();
 	std::cout << "Data Loaded!" << std::endl;
-	for (int i = 0; i < data.size(); i++)
+
+	for (int j = 0; j < 1000; j++)
 	{
-		std::shared_ptr<Matrix<1, 1>> target = std::make_shared<Matrix<1,1>>();
-		target->data[0][0] = scores[i];
-		auto result = nn->train(data[i], target);
-		// std::cout << result.data[0][0] << ", " << target->data[0][0] << std::endl;
+		float total_err = 0;
+		for (int i = 0; i < data.size(); i++)
+		{
+			std::shared_ptr<Matrix<1, 1>> target = std::make_shared<Matrix<1, 1>>();
+			target->data[0][0] = scores[i];
+			auto result = nn->train(data[i], target);
+			float err = 100.f * (result.data[0][0] - target->data[0][0]) / (target->data[0][0]);
+			total_err += abs(err);
+		}
+
+		int x = rand() % data.size();
+		auto arr = data[x];
+		auto guess = nn->think(arr);
+		std::cout << (10000.f * (guess.data[0][0] - 0.5f)) << " - " << (10000.f * (scores[x] - 0.5f)) << std::endl;
+		total_err /= data.size();
+		std::cout << j << " %" << total_err << std::endl << std::endl;
+
+		std::stringstream name;
+		name << "nn_" << ".txt";
+		nn->save(name.str());
 	}
+
 	std::cout << "Trained!!!" << std::endl;
 }
 
@@ -69,7 +114,7 @@ void createTrainingData()
 	Board* board = new Board();
 
 	std::ofstream* file = new std::ofstream();
-	file->open("data.txt");
+	file->open("data_1.txt");
 
 	for (int i = 0; i < 100000; i++)
 	{
@@ -88,7 +133,7 @@ void createTrainingData()
 		else
 		{
 			bool moved = board->doRandomMove(i);
-			if (!moved || i%2000 == 0)
+			if (!moved || i % 2000 == 0)
 			{
 				// std::cout << "Reseted!" << std::endl;
 				*board = Board();

@@ -38,7 +38,7 @@ public:
 		for (int i = 0; i < rows; i++)
 		{
 			for (int j = 0; j < cols; j++)
-				data[i][j] = 2 * static_cast<float>(std::rand()) / static_cast<float>(RAND_MAX) - 1;
+				data[i][j] = 2 * (static_cast<float>(std::rand()) / static_cast<float>(RAND_MAX)) - 1;
 		}
 	}
 
@@ -49,6 +49,17 @@ public:
 			for (int j = 0; j < cols; j++)
 			{
 				data[i][j] *= other.data[i][j];
+			}
+		}
+	}
+
+	void elementalMultiply(std::shared_ptr<Matrix<rows, cols>> other)
+	{
+		for (int i = 0; i < rows; i++)
+		{
+			for (int j = 0; j < cols; j++)
+			{
+				data[i][j] *= other->data[i][j];
 			}
 		}
 	}
@@ -111,8 +122,6 @@ public:
 		}
 		return result;
 	}
-
-
 
 	static std::shared_ptr<Matrix<rows, cols>> substract(std::shared_ptr<Matrix<rows, cols>> a, std::shared_ptr<Matrix<rows, cols>> b)
 	{
